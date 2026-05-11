@@ -1,0 +1,51 @@
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    id "dev.flutter.flutter-gradle-plugin" // Flutter Gradle plugin
+}
+
+android {
+    namespace = "com.example.sam_pro"
+    compileSdk = flutter.compileSdkVersion
+    ndkVersion = "25.1.8937393"
+
+    compileOptions {
+        coreLibraryDesugaringEnabled true
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+
+    defaultConfig {
+        applicationId = "com.example.sam_pro"
+        minSdkVersion = flutter.minSdkVersion
+        targetSdk = flutter.targetSdkVersion
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
+        multiDexEnabled true
+    }
+
+    buildTypes {
+        release {
+            signingConfig = signingConfigs.debug
+        }
+    }
+}
+
+flutter {
+    source = "../.."
+}
+
+apply plugin: 'com.google.gms.google-services'
+
+dependencies {
+    implementation platform('com.google.firebase:firebase-bom:33.4.0') // Firebase BoM
+    implementation 'com.google.firebase:firebase-analytics' // Firebase Analytics
+    implementation 'com.google.firebase:firebase-messaging' // Firebase Messaging
+
+    // Core library desugaring
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.3'
+}

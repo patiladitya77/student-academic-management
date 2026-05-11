@@ -1,0 +1,349 @@
+# Implementation Plan: Teacher Attendance Date and Time Selection
+
+## Overview
+
+This implementation adds date and time slot selection to the teacher attendance marking flow. The approach follows a sequential navigation pattern: Course Selection → Date Selection → Time Slot Selection → Attendance Marking. The implementation preserves backward compatibility with existing attendance data while adding session-level tracking capabilities.
+
+## Tasks
+
+- [ ] 1. Create data models and service layer
+  - [ ] 1.1 Create TimeSlot model class
+    - Implement TimeSlot class with id, displayName, startTime, endTime fields
+    - Add fromFirestore and toFirestore factory methods
+    - _Requirements: 2.2, 2.5_
+  - [ ] 1.2 Create AttendanceSession model class
+    - Implement AttendanceSession class with sessionId, date, timeSlot, createdAt, teacherId, teacherName fields
+    - Add fromFirestore factory method
+    - _Requirements: 3.1, 3.2, 3.3_
+  - [ ] 1.3 Create StudentAttendanceRecord model class
+    - Implement StudentAttendanceRecord class with studentId, status, markedAt fields
+    - Add fromFirestore factory method
+    - _Requirements: 3.1, 3.2_
+  - [ ] 1.4 Implement AttendanceService class
+    - Create getTimeSlots method to fetch time slots from Firestore
+    - Create hasExistingAttendance method to check for duplicate sessions
+    - Create getExistingSession method to retrieve session details
+    - Create generateSessionId method for unique session identification
+    - Create formatDate and formatDateDisplay utility methods
+    - _Requirements: 2.5, 4.1, 4.2_
+  - [ ]\* 1.5 Write property test for TimeSlot model
+    - **Property 5: Session metadata storage**
+    - **Validates: Requirements 3.1, 3.2**
+    - Generate random TimeSlot instances and verify fromFirestore/toFirestore round-trip consistency
+
+- [ ] 2. Implement DateSelectionScreen
+  - [ ] 2.1 Create DateSelectionScreen widget with state management
+    - Create StatefulWidget with semester, courseName, teacherId, teacherName parameters
+    - Initialize state with selectedDate (default to current date), earliestDate (90 days ago), latestDate (current date)
+    - _Requirements: 1.1, 1.3_
+  - [ ] 2.2 Build date selection UI
+    - Add calendar widget using showDatePicker or custom calendar
+    - Display selected date in readable format
+    - Add Continue button to proceed to time slot selection
+    - Add Back button to return to course selection
+    - _Requirements: 1.1_
+  - [ ] 2.3 Implement date validation logic
+    - Validate selected date is within 90 days in the past
+    - Validate selected date is not in the future
+    - Display error dialog for invalid dates
+    - Prevent navigation to time slot selection for invalid dates
+    - _Requirements: 1.2, 1.4, 1.5_
+  - [ ] 2.4 Implement navigation to TimeSlotSelectionScreen
+    - Create \_proceedToTimeSlotSelection method
+    - Pass semester, courseName, teacherId, teacherName, selectedDate to next screen
+    - _Requirements: 6.1, 6.2_
+  - [ ]\* 2.5 Write property test for date range validation
+    - **Property 1: Date range validation**
+    - **Validates: Requirements 1.2, 1.4, 1.5**
+    - Generate random dates spanning 180 days before and after current date
+    - Verify dates within 90 days past to current are accepted, others rejected
+  - [ ]\* 2.6 Write unit tests for DateSelectionScreen
+    - Test default date is current date
+    - Test error message displays for dates outside range
+    - Test navigation to time slot selection with valid date
+    - _Requirements: 1.3, 1.5_
+
+- [ ] 3. Implement TimeSlotSelectionScreen
+  - [ ] 3.1 Create TimeSlotSelectionScreen widget with state management
+    - Create StatefulWidget with semester, courseName, teacherId, teacherName, selectedDate parameters
+    - Initialize state with availableTimeSlots list, selectedTimeSlot, isLoading, hasExistingRecords, existingRecordDate
+    - _Requirements: 2.1_
+  - [ ] 3.2 Fetch and display time slots
+    - Use AttendanceService.getTimeSlots to retrieve time slots from Firestore
+    - Display time slots in a selectable list UI
+    - Handle loading state and empty time slot scenarios
+    - _Requirements: 2.2, 2.5_
+  - [ ] 3.3 Implement duplicate attendance detection
+    - Create \_checkExistingAttendance method
+    - Query Firestore for existing sessions with matching date and time slot
+    - Update state with hasExistingRecords and existingRecordDate if found
+    - Display warning banner when duplicates detected
+    - _Requirements: 4.1, 4.2, 4.3_
+  - [ ] 3.4 Build time slot selection UI
+    - Display list of selectable time slots
+    - Show warning banner if attendance already exists
+    - Add Continue button to proceed to attendance marking
+    - Add Back button to return to date selection
+    - _Requirements: 2.1, 2.3_
+  - [ ] 3.5 Implement navigation to AttendancePage
+    - Create \_proceedToAttendanceMarking method
+    - Pass semester, courseName, teacherId, teacherName, selectedDate, selectedTimeSlot to AttendancePage
+    - _Requirements: 2.3, 6.1, 6.3_
+  - [ ]\* 3.6 Write property test for time slot display completeness
+    - **Property 2: Time slot display completeness**
+    - **Validates: Requirements 2.2**
+    - Generate random lists of time slots (0-10 slots)
+    - Verify all generated time slots appear in selector
+  - [ ]\* 3.7 Write property test for duplicate session detection
+    - **Property 9: Duplicate session detection**
+    - **Validates: Requirements 4.1, 4.2, 4.3**
+    - Generate random existing sessions, then attempt to create duplicate
+    - Verify system detects duplicate and displays warning with timestamp
+  - [ ]\* 3.8 Write unit tests for TimeSlotSelectionScreen
+    - Test time slots load from Firestore
+    - Test duplicate warning displays when records exist
+    - Test navigation to attendance marking with selected time slot
+    - _Requirements: 2.2, 4.2, 2.3_
+
+- [ ] 4. Checkpoint - Ensure navigation flow works end-to-end
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [ ] 5. Modify AttendancePage for date/time context
+  - [ ] 5.1 Update AttendancePage constructor
+    - Add selectedDate and selectedTimeSlot parameters to constructor
+    - Update all references to AttendancePage to include new parameters
+    - _Requirements: 2.4, 5.1, 5.2_
+  - [ ] 5.2 Build date and time slot header display
+    - Create sticky header section displaying course name, semester, selected date, selected time slot
+    - Format date using "DayOfWeek, Month Day, Year" pattern
+    - Display time slot with format "Period X: HH:MM AM/PM - HH:MM AM/PM"
+    - Ensure header remains visible while scrolling student list
+    - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
+  - [ ] 5.3 Add warning banner for overwriting existing records
+    - Display warning banner if hasExistingRecords is true
+    - Show options to view existing records, overwrite, or cancel
+    - Require confirmation before overwriting
+    - _Requirements: 4.3, 4.4, 4.5_
+  - [ ]\* 5.4 Write property test for session context display
+    - **Property 3: Session context display**
+    - **Validates: Requirements 2.4, 5.1, 5.2, 5.4**
+    - Generate random dates and time slots
+    - Verify both date and time slot appear in rendered output
+  - [ ]\* 5.5 Write property test for date format consistency
+    - **Property 4: Date format consistency**
+    - **Validates: Requirements 5.3**
+    - Generate random dates
+    - Verify formatted output matches "DayOfWeek, Month Day, Year" pattern
+  - [ ]\* 5.6 Write unit tests for AttendancePage header
+    - Test date displays in correct format
+    - Test time slot displays correctly
+    - Test header remains visible while scrolling
+    - _Requirements: 5.3, 5.4, 5.5_
+
+- [ ] 6. Implement session-level attendance storage
+  - [ ] 6.1 Modify saveAttendance method in AttendancePage
+    - Generate unique sessionId using date and time slot
+    - Create session-level document at Attendance/{semester}/{courseName}/sessions/records/{sessionId}
+    - Store session metadata: date, time_slot_id, time_slot_name, created_at, teacher_id, teacher_name
+    - _Requirements: 3.1, 3.2, 3.3_
+  - [ ] 6.2 Update student-level attendance records
+    - Maintain existing cumulative counter logic (present, total, last_status, date)
+    - Store individual session records at sessions/records/{sessionId}/students/{studentId}
+    - Include status and marked_at timestamp for each student
+    - Use Firestore batch writes for atomic operations
+    - _Requirements: 3.4, 3.5_
+  - [ ] 6.3 Implement session idempotence logic
+    - Check if session already exists before creating
+    - Update existing session records instead of creating duplicates
+    - Ensure cumulative counters are adjusted correctly when overwriting
+    - _Requirements: 3.4_
+  - [ ]\* 6.4 Write property test for session metadata storage
+    - **Property 5: Session metadata storage**
+    - **Validates: Requirements 3.1, 3.2**
+    - Generate random attendance submissions with dates and time slots
+    - Verify stored records contain both date (YYYY-MM-DD) and time slot ID
+  - [ ]\* 6.5 Write property test for queryable session structure
+    - **Property 6: Queryable session structure**
+    - **Validates: Requirements 3.3**
+    - Generate random attendance sessions
+    - Verify query by date and time slot successfully retrieves the session
+  - [ ]\* 6.6 Write property test for session idempotence
+    - **Property 7: Session idempotence**
+    - **Validates: Requirements 3.4**
+    - Generate random attendance data
+    - Verify submitting twice produces same result as submitting once
+  - [ ]\* 6.7 Write property test for cumulative counter accuracy
+    - **Property 8: Cumulative counter accuracy**
+    - **Validates: Requirements 3.5**
+    - Generate random sequences of attendance sessions with varying P/A statuses
+    - Verify cumulative counters equal sum of individual session statuses
+  - [ ]\* 6.8 Write unit tests for saveAttendance method
+    - Test session document created with correct metadata
+    - Test student records stored in session subcollection
+    - Test cumulative counters updated correctly
+    - Test batch write handles errors gracefully
+    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
+
+- [ ] 7. Checkpoint - Ensure attendance storage works correctly
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [ ] 8. Implement error handling
+  - [ ] 8.1 Add error handling for date selection
+    - Handle date picker widget failures with fallback text input
+    - Display error dialog for invalid date ranges
+    - Log errors for debugging
+    - _Requirements: 1.5_
+  - [ ] 8.2 Add error handling for time slot selection
+    - Handle no time slots available scenario
+    - Handle Firestore connection errors with retry mechanism
+    - Display appropriate error messages to user
+    - _Requirements: 2.2, 2.5_
+  - [ ] 8.3 Add error handling for attendance submission
+    - Handle network failures during submission
+    - Handle partial batch write failures
+    - Handle duplicate session conflicts
+    - Preserve attendance data in local state for retry
+    - Display appropriate error messages and recovery options
+    - _Requirements: 3.4, 4.4, 4.5_
+  - [ ]\* 8.4 Write unit tests for error scenarios
+    - Test date picker failure fallback
+    - Test no time slots available handling
+    - Test network failure during submission
+    - Test partial batch write failure recovery
+    - Test duplicate session conflict handling
+
+- [ ] 9. Implement navigation state preservation
+  - [ ] 9.1 Add back button navigation to TimeSlotSelectionScreen
+    - Implement back navigation that returns to DateSelectionScreen
+    - Preserve selectedDate when navigating back
+    - _Requirements: 6.4, 6.5_
+  - [ ] 9.2 Add back button navigation to AttendancePage
+    - Implement back navigation that returns to TimeSlotSelectionScreen
+    - Preserve selectedDate and selectedTimeSlot when navigating back
+    - _Requirements: 6.4, 6.5_
+  - [ ]\* 9.3 Write property test for navigation state preservation
+    - **Property 10: Navigation state preservation**
+    - **Validates: Requirements 6.5**
+    - Generate random dates
+    - Verify after back navigation, selected date remains unchanged
+  - [ ]\* 9.4 Write unit tests for back navigation
+    - Test back button from time slot selection preserves date
+    - Test back button from attendance marking preserves date and time slot
+    - _Requirements: 6.4, 6.5_
+
+- [ ] 10. Enhance attendance reports with date/time filtering
+  - [ ] 10.1 Add date range filter to report generation UI
+    - Create date range picker for report filters
+    - Add start date and end date input fields
+    - _Requirements: 7.1, 7.2_
+  - [ ] 10.2 Add time slot filter to report generation UI
+    - Create multi-select dropdown for time slot selection
+    - Display available time slots for the course
+    - _Requirements: 7.1, 7.3_
+  - [ ] 10.3 Implement filtered attendance data query
+    - Query sessions collection with date range filter
+    - Query sessions collection with time slot filter
+    - Combine filters to retrieve matching sessions
+    - _Requirements: 7.2, 7.3_
+  - [ ] 10.4 Update PDF report generation
+    - Display applied filter criteria in PDF header (date range and time slot names)
+    - Calculate attendance percentages based only on filtered sessions
+    - Include session-level details in report
+    - _Requirements: 7.4, 7.5_
+  - [ ]\* 10.5 Write property test for date range report filtering
+    - **Property 11: Date range report filtering**
+    - **Validates: Requirements 7.2**
+    - Generate random attendance sessions and date range filters
+    - Verify report includes only sessions within date range
+  - [ ]\* 10.6 Write property test for time slot report filtering
+    - **Property 12: Time slot report filtering**
+    - **Validates: Requirements 7.3**
+    - Generate random attendance sessions and time slot filters
+    - Verify report includes only sessions matching time slot filters
+  - [ ]\* 10.7 Write property test for report metadata display
+    - **Property 13: Report metadata display**
+    - **Validates: Requirements 7.4**
+    - Generate random filter criteria
+    - Verify PDF output contains filter criteria text
+  - [ ]\* 10.8 Write property test for filtered attendance percentage calculation
+    - **Property 14: Filtered attendance percentage calculation**
+    - **Validates: Requirements 7.5**
+    - Generate random attendance data with filters
+    - Verify percentage calculated only from filtered sessions
+  - [ ]\* 10.9 Write unit tests for report filtering
+    - Test date range filter retrieves correct sessions
+    - Test time slot filter retrieves correct sessions
+    - Test combined filters work correctly
+    - Test PDF displays filter criteria
+    - Test attendance percentage calculation with filters
+    - _Requirements: 7.2, 7.3, 7.4, 7.5_
+
+- [ ] 11. Implement backward compatibility with legacy data
+  - [ ] 11.1 Add legacy data reading logic
+    - Read existing attendance records without date/time slot fields
+    - Use 'date' timestamp field as session date for legacy records
+    - Assign default time slot "Legacy Session" for records without time slot
+    - _Requirements: 8.1, 8.2_
+  - [ ] 11.2 Implement legacy data migration on update
+    - When updating legacy records, add date and time slot fields
+    - Preserve existing present/total counts during migration
+    - Mark migrated records for verification
+    - _Requirements: 8.3_
+  - [ ] 11.3 Ensure counter calculation consistency
+    - Verify present/total count calculation produces same result with old and new methods
+    - Maintain compatibility with existing Firestore data structure
+    - _Requirements: 8.4, 8.5_
+  - [ ]\* 11.4 Write property test for legacy data compatibility
+    - **Property 15: Legacy data compatibility**
+    - **Validates: Requirements 8.1, 8.2**
+    - Generate random old-format attendance records
+    - Verify system reads records and treats 'date' timestamp as session date
+  - [ ]\* 11.5 Write property test for legacy data migration
+    - **Property 16: Legacy data migration**
+    - **Validates: Requirements 8.3**
+    - Generate random old-format records
+    - Verify after update, records have new fields and preserved counters
+  - [ ]\* 11.6 Write property test for counter calculation consistency
+    - **Property 17: Counter calculation consistency**
+    - **Validates: Requirements 8.4**
+    - Generate random attendance data
+    - Verify old and new calculation methods produce same result
+  - [ ]\* 11.7 Write unit tests for legacy data handling
+    - Test reading legacy records without date/time fields
+    - Test migration adds new fields while preserving counters
+    - Test counter calculation consistency
+    - _Requirements: 8.1, 8.2, 8.3, 8.4_
+
+- [ ] 12. Final integration and testing
+  - [ ] 12.1 Test complete navigation flow end-to-end
+    - Test flow from course selection through attendance submission
+    - Verify all screens display correct information
+    - Verify data persists correctly in Firestore
+    - _Requirements: 6.1, 6.2, 6.3_
+  - [ ] 12.2 Test error scenarios end-to-end
+    - Test network failures at each step
+    - Test invalid inputs and edge cases
+    - Verify error messages display correctly
+    - Verify recovery mechanisms work
+  - [ ]\* 12.3 Run all property-based tests with 100 iterations
+    - Execute all 17 property tests with minimum 100 iterations each
+    - Verify all properties pass consistently
+    - Document any failures or edge cases discovered
+  - [ ] 12.4 Verify backward compatibility
+    - Test with existing attendance data
+    - Verify legacy records display correctly
+    - Verify migration works on update
+    - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5_
+
+- [ ] 13. Final checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+## Notes
+
+- Tasks marked with `*` are optional and can be skipped for faster MVP
+- Each task references specific requirements for traceability
+- Property-based tests validate universal correctness properties across randomized inputs
+- Unit tests validate specific examples and edge cases
+- Checkpoints ensure incremental validation at key milestones
+- All code should follow existing Flutter/Dart conventions in the project
+- Firestore operations should use batch writes for atomicity where possible
