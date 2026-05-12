@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:sam_pro/Teacher/Attendance/Teacheraddattemdance.dart';
+import 'package:sam_pro/Teacher/Attendance/screens/date_selection_screen.dart';
 import 'package:sam_pro/Teacher/UploadResult/uploadviewstud.dart';
 class Semesterscreen extends StatefulWidget {
   final String name;
@@ -98,11 +98,11 @@ class _SemwiseResultState extends State<Semesterscreen> {
                             ],
                           ),
                           onTap: (){
-                            Navigator.push(context, MaterialPageRoute(builder: (context)=>AttendancePage(
+                            Navigator.push(context, MaterialPageRoute(builder: (context)=>DateSelectionScreen(
                               semester:course['semester'] ?? 'N/A',
                               courseName:course['course_name'] ?? 'N/A',
-                              id:widget.id,
-                              name:widget.name,
+                              teacherId:widget.id,
+                              teacherName:widget.name,
                             )));
                           },
                           trailing: Icon(Icons.arrow_forward_ios,color: Colors.black,),
