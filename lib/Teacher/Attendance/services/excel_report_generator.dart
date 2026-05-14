@@ -38,7 +38,7 @@ class ExcelReportGenerator {
 
       // Create Excel workbook
       final excel = _createWorkbook();
-      final sheet = excel.sheets[excel.getDefaultSheet()]!;
+      final sheet = excel.sheets['Attendance Report'] ?? excel.sheets[excel.getDefaultSheet()!]!;
 
       // Add metadata rows
       _addMetadataRows(
@@ -128,8 +128,11 @@ class ExcelReportGenerator {
     
     // Rename default sheet to "Attendance Report"
     final defaultSheet = excel.getDefaultSheet();
-    if (defaultSheet != null) {
+    if (defaultSheet != null && defaultSheet != 'Attendance Report') {
       excel.rename(defaultSheet, 'Attendance Report');
+    } else if (defaultSheet == null) {
+      // Fallback: create the sheet explicitly
+      excel['Attendance Report'];
     }
     
     return excel;

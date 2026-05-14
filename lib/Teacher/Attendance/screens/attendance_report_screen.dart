@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:excel/excel.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -871,16 +872,17 @@ class _AttendanceReportScreenState extends State<AttendanceReportScreen> {
                   
                   SizedBox(height: 32),
                   
-                  // Generate button
+                  // Generate full report button
                   SizedBox(
                     width: double.infinity,
-                    child: ElevatedButton(
+                    child: ElevatedButton.icon(
                       onPressed: _isGeneratingReport ? null : _generateReport,
+                      icon: Icon(Icons.table_chart, color: Colors.white),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blueAccent,
                         padding: EdgeInsets.symmetric(vertical: 16),
                       ),
-                      child: _isGeneratingReport
+                      label: _isGeneratingReport
                           ? SizedBox(
                               height: 20,
                               width: 20,
@@ -899,9 +901,189 @@ class _AttendanceReportScreenState extends State<AttendanceReportScreen> {
                             ),
                     ),
                   ),
+
+                  SizedBox(height: 12),
+
+                  // Defaulter list button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _isGeneratingReport ? null : _generateDefaulterList,
+                      icon: Icon(Icons.warning_amber_rounded, color: Colors.white),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange.shade700,
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      label: Text(
+                        'Get Defaulter List (< 75%)',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
     );
+  }
+
+  /// Generate defaulter list Excel — students with attendance < 75%
+  Future<void> _generateDefaulterList() async {
+    if (_startDate == null || _endDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please select both start and end dates')),
+      );
+      return;
+    }
+
+    setState(() => _isGeneratingReport = true);
+
+    try {
+      final attendanceData = await _fetchFilteredAttendanceData();
+
+      // Filter defaulters: attendance percentage < 75%
+      final defaulters = attendanceData.entries.where((entry) {
+        final present = entry.value['present'] as int? ?? 0;
+        final total = entry.value['total'] as int? ?? 0;
+        if (total == 0) return true; // 0 attendance = defaulter
+        return (present * 100.0 / total) < 75.0;
+      }).toList();
+
+      if (defaulters.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('No defaulters found — all students have ≥ 75% attendance'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Build Excel
+      final excel = Excel.createExcel();
+      final defaultSheet = excel.getDefaultSheet();
+      if (defaultSheet != null && defaultSheet != 'Defaulter List') {
+        excel.rename(defaultSheet, 'Defaulter List');
+      }
+      final sheet = excel.sheets['Defaulter List'] ?? excel.sheets[excel.getDefaultSheet()!]!;
+
+      // Metadata
+      var cell = sheet.cell(CellIndex.indexByString('A1'));
+      cell.value = TextCellValue('Course: ${widget.courseName}');
+      cell.cellStyle = CellStyle(bold: true);
+
+      cell = sheet.cell(CellIndex.indexByString('A2'));
+      cell.value = TextCellValue('Semester: ${widget.semester}');
+      cell.cellStyle = CellStyle(bold: true);
+
+      cell = sheet.cell(CellIndex.indexByString('A3'));
+      cell.value = TextCellValue(
+        'Date Range: ${DateFormat('yyyy-MM-dd').format(_startDate!)} to ${DateFormat('yyyy-MM-dd').format(_endDate!)}',
+      );
+      cell.cellStyle = CellStyle(bold: true);
+
+      cell = sheet.cell(CellIndex.indexByString('A4'));
+      cell.value = TextCellValue('Threshold: < 75% attendance');
+      cell.cellStyle = CellStyle(bold: true);
+
+      // Header row
+      const headerRow = 5;
+      final headers = ['S.No', 'Student ID', 'Present', 'Total', 'Attendance %'];
+      for (int i = 0; i < headers.length; i++) {
+        cell = sheet.cell(CellIndex.indexByColumnRow(columnIndex: i, rowIndex: headerRow));
+        cell.value = TextCellValue(headers[i]);
+        cell.cellStyle = CellStyle(bold: true);
+      }
+
+      // Sort defaulters by attendance % ascending
+      defaulters.sort((a, b) {
+        final aTotal = a.value['total'] as int? ?? 0;
+        final aPresent = a.value['present'] as int? ?? 0;
+        final bTotal = b.value['total'] as int? ?? 0;
+        final bPresent = b.value['present'] as int? ?? 0;
+        final aPct = aTotal > 0 ? aPresent * 100.0 / aTotal : 0.0;
+        final bPct = bTotal > 0 ? bPresent * 100.0 / bTotal : 0.0;
+        return aPct.compareTo(bPct);
+      });
+
+      // Data rows
+      for (int i = 0; i < defaulters.length; i++) {
+        final studentId = defaulters[i].key;
+        final data = defaulters[i].value;
+        final present = data['present'] as int? ?? 0;
+        final total = data['total'] as int? ?? 0;
+        final pct = total > 0 ? (present * 100.0 / total).toStringAsFixed(2) : '0.00';
+        final rowIndex = headerRow + 1 + i;
+
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: rowIndex)).value =
+            TextCellValue('${i + 1}');
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: rowIndex)).value =
+            TextCellValue(studentId);
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: rowIndex)).value =
+            TextCellValue('$present');
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: rowIndex)).value =
+            TextCellValue('$total');
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: rowIndex)).value =
+            TextCellValue('$pct%');
+      }
+
+      // Auto-size columns
+      for (int col = 0; col < headers.length; col++) {
+        sheet.setColumnWidth(col, col == 1 ? 20.0 : 14.0);
+      }
+
+      // Save file
+      final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+      final sanitized = widget.courseName
+          .trim()
+          .replaceAll(RegExp(r'[^\w\s-]'), '')
+          .replaceAll(RegExp(r'\s+'), '_')
+          .trim();
+      final filename = '${sanitized}_defaulters_$timestamp.xlsx';
+
+      Directory directory;
+      if (Platform.isAndroid) {
+        directory = (await getExternalStorageDirectory())!;
+        final downloadsPath = directory.path.replaceAll(
+            'Android/data/com.example.app/files', 'Download');
+        final downloadsDir = Directory(downloadsPath);
+        if (await downloadsDir.exists()) directory = downloadsDir;
+      } else {
+        directory = await getApplicationDocumentsDirectory();
+      }
+
+      final filePath = '${directory.path}/$filename';
+      final bytes = excel.encode();
+      if (bytes == null) throw Exception('Failed to encode Excel file');
+      await File(filePath).writeAsBytes(bytes);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Defaulter list generated — ${defaulters.length} student(s)'),
+            backgroundColor: Colors.orange.shade700,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        await _showFileOptions(filePath);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to generate defaulter list: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      debugPrint('Defaulter list error: $e');
+    } finally {
+      if (mounted) setState(() => _isGeneratingReport = false);
+    }
   }
 }

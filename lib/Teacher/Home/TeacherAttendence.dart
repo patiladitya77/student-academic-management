@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:sam_pro/Teacher/Attendance/screens/date_selection_screen.dart';
+import 'package:sam_pro/Teacher/Attendance/screens/attendance_report_screen.dart';
 import 'package:sam_pro/Teacher/UploadResult/uploadviewstud.dart';
 class Semesterscreen extends StatefulWidget {
   final String name;
@@ -85,27 +86,39 @@ class _SemwiseResultState extends State<Semesterscreen> {
                             course['course_name'] ?? 'Unnamed Course',
                             style: TextStyle(fontFamily: 'Nexa'),
                           ),
-                          subtitle: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Semester: ${course['semester'] ?? 'N/A'}',
-                                style: TextStyle(
-                                  fontFamily: 'NexaBold',
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-                            ],
+                          subtitle: Text(
+                            'Semester: ${course['semester'] ?? 'N/A'}',
+                            style: TextStyle(
+                              fontFamily: 'NexaBold',
+                              fontWeight: FontWeight.w900,
+                            ),
                           ),
-                          onTap: (){
-                            Navigator.push(context, MaterialPageRoute(builder: (context)=>DateSelectionScreen(
-                              semester:course['semester'] ?? 'N/A',
-                              courseName:course['course_name'] ?? 'N/A',
-                              teacherId:widget.id,
-                              teacherName:widget.name,
+                          onTap: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (context) => DateSelectionScreen(
+                              semester: course['semester'] ?? 'N/A',
+                              courseName: course['course_name'] ?? 'N/A',
+                              teacherId: widget.id,
+                              teacherName: widget.name,
                             )));
                           },
-                          trailing: Icon(Icons.arrow_forward_ios,color: Colors.black,),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: Icon(Icons.bar_chart, color: Colors.blueAccent),
+                                tooltip: 'View Report',
+                                onPressed: () {
+                                  Navigator.push(context, MaterialPageRoute(builder: (context) => AttendanceReportScreen(
+                                    semester: course['semester'] ?? 'N/A',
+                                    courseName: course['course_name'] ?? 'N/A',
+                                    teacherId: widget.id,
+                                    teacherName: widget.name,
+                                  )));
+                                },
+                              ),
+                              Icon(Icons.arrow_forward_ios, color: Colors.black),
+                            ],
+                          ),
                         ),
                       );
                     },

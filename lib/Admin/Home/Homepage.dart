@@ -8,6 +8,7 @@ import 'package:sam_pro/Admin/Home/Add_student/students_list.dart';
 import 'package:sam_pro/Admin/Home/Add_teacher/teacher.dart';
 import 'package:sam_pro/Admin/Home/Add_teacher/teachers_list.dart';
 import 'package:sam_pro/Admin/Home/Notice.dart';
+import 'package:sam_pro/Admin/Attendance/screens/admin_attendance_selection_screen.dart';
 import 'package:sam_pro/Admin/Home/postexam.dart';
 import 'package:sam_pro/Student/drawer/StudentSchedule.dart';
 import 'package:sam_pro/rolescreen.dart';
@@ -213,12 +214,16 @@ class adminhomepage extends StatelessWidget {
               padding: const EdgeInsets.all(5),
               child: InkWell(
                 onTap: () {
-                  Navigator.push(context,
-                      MaterialPageRoute(builder: (context) => AddNotice()));
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) =>
+                              AdminAttendanceSelectionScreen()));
                 },
                 child: ListTile(
-                  leading: Icon(Icons.note_add, color: Colors.redAccent),
-                  title: Text("Post Notice",
+                  leading:
+                      Icon(Icons.bar_chart, color: Colors.blueAccent),
+                  title: Text("Attendance Report",
                       style: TextStyle(fontFamily: 'Nexa', fontSize: 18)),
                   trailing: Icon(Icons.arrow_forward_ios),
                   tileColor: Colors.grey.shade100,

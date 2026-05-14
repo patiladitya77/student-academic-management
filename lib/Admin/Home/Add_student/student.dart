@@ -25,6 +25,17 @@ class _StudentPageState extends State<StudentPage> {
   final List<String> semesters = ['1', '2', '3', '4', '5', '6', '7', '8'];
   String _selectedSemester = '1';
 
+  final List<String> branches = [
+    'Computer Science & Engineering',
+    'Information Science & Engineering',
+    'Civil Engineering',
+    'Mechanical Engineering',
+    'Electrical Engineering',
+    'Electronics & Communication Engineering',
+    'Biotechnology Engineering',
+  ];
+  String _selectedBranch = 'Computer Science & Engineering';
+
   bool _addLoading = false;
   bool _rmLoading = false;
   bool _uploadLoading = false;
@@ -58,6 +69,7 @@ class _StudentPageState extends State<StudentPage> {
           'id': uqid,
           'email': email,
           'semester': _selectedSemester,
+          'branch': _selectedBranch,
         });
 
         await _fstudent.doc(uqid).set({
@@ -65,6 +77,7 @@ class _StudentPageState extends State<StudentPage> {
           'id': uqid,
           'email': email,
           'semester': _selectedSemester,
+          'branch': _selectedBranch,
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -161,6 +174,7 @@ class _StudentPageState extends State<StudentPage> {
                   'id': uqid,
                   'email': email,
                   'semester': _selectedSemester,
+                  'branch': _selectedBranch,
                 });
 
                 await _fstudent.doc(uqid).set({
@@ -168,6 +182,7 @@ class _StudentPageState extends State<StudentPage> {
                   'id': uqid,
                   'email': email,
                   'semester': _selectedSemester,
+                  'branch': _selectedBranch,
                 });
               }
             }
@@ -223,6 +238,21 @@ class _StudentPageState extends State<StudentPage> {
                   onChanged: (value) => setState(() => _selectedSemester = value!),
                   decoration: const InputDecoration(
                     labelText: "Select Semester",
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: DropdownButtonFormField<String>(
+                  value: _selectedBranch,
+                  isExpanded: true,
+                  items: branches
+                      .map((b) => DropdownMenuItem(value: b, child: Text(b)))
+                      .toList(),
+                  onChanged: (value) => setState(() => _selectedBranch = value!),
+                  decoration: const InputDecoration(
+                    labelText: "Select Branch",
                     border: OutlineInputBorder(),
                   ),
                 ),
