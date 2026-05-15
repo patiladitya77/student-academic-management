@@ -1,20 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_database/firebase_database.dart';
 import '../models/student_attendance_summary.dart';
 
 /// Service responsible for fetching courses, students, and attendance data
 /// from Firebase for the admin attendance report.
 class AdminAttendanceService {
   final FirebaseFirestore _firestore;
-  final DatabaseReference _studentsRef;
 
   AdminAttendanceService({
     FirebaseFirestore? firestore,
-    DatabaseReference? studentsRef,
-  })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _studentsRef = studentsRef ??
-            FirebaseDatabase.instance.ref('Admin_Students_List');
-
+  }) : _firestore = firestore ?? FirebaseFirestore.instance;
 
   /// Queries [Admin_added_Course] Firestore collection for documents matching
   /// [semester] and [branch], and returns the list of [course_name] strings.
@@ -34,33 +28,20 @@ class AdminAttendanceService {
         .toList();
   }
 
-
-  /// Queries [Admin_Students_List] Realtime DB ordered by [semester], then
-  /// filters in-memory by [branch], and returns the list of student [id] strings.
+  /// Queries [Student_users] Firestore collection for documents matching
+  /// [semester] and [branch_name], and returns the list of [id] strings.
   ///
-  /// Throws [Exception] on database errors.
+  /// Throws [FirebaseException] on Firestore errors.
   Future<List<String>> fetchStudentIds(
       String semester, String branch) async {
-    final snapshot = await _studentsRef
-        .orderByChild('semester')
-        .equalTo(semester)
+    final snapshot = await _firestore
+        .collection('Student_users')
+        .where('semester', isEqualTo: semester)
+        .where('branch_name', isEqualTo: branch)
         .get();
 
-    if (!snapshot.exists || snapshot.value == null) {
-      return [];
-    }
-
-    final data = Map<String, dynamic>.from(snapshot.value as Map);
-
-    return data.values
-        .where((entry) {
-          final student = Map<String, dynamic>.from(entry as Map);
-          return student['branch'] == branch;
-        })
-        .map((entry) {
-          final student = Map<String, dynamic>.from(entry as Map);
-          return student['id'] as String? ?? '';
-        })
+    return snapshot.docs
+        .map((doc) => doc.data()['id'] as String? ?? '')
         .where((id) => id.isNotEmpty)
         .toList();
   }

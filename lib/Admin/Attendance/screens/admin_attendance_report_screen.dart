@@ -1,5 +1,9 @@
+import 'dart:io';
+import 'package:excel/excel.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:open_file/open_file.dart';
+import 'package:path_provider/path_provider.dart';
 import '../models/student_attendance_summary.dart';
 import '../services/admin_attendance_service.dart';
 
@@ -126,11 +130,59 @@ class _AdminAttendanceReportScreenState
     }
   }
 
+  Future<void> _exportToExcel() async {
+    if (_reportData.isEmpty) return;
+
+    final excel = Excel.createExcel();
+    final sheet = excel['Attendance Report'];
+
+    // Header row
+    sheet.appendRow([
+      TextCellValue('Student ID'),
+      TextCellValue('Present'),
+      TextCellValue('Total'),
+      TextCellValue('Attendance %'),
+    ]);
+
+    for (final s in _reportData) {
+      sheet.appendRow([
+        TextCellValue(s.studentId),
+        IntCellValue(s.totalPresent),
+        IntCellValue(s.totalClasses),
+        DoubleCellValue(double.parse(s.attendancePercentage.toStringAsFixed(2))),
+      ]);
+    }
+
+    final dir = await getApplicationDocumentsDirectory();
+    final fileName =
+        'attendance_sem${widget.semester}_${widget.branch.replaceAll(' ', '_')}.xlsx';
+    final file = File('${dir.path}/$fileName');
+    final bytes = excel.encode();
+    if (bytes == null) return;
+    await file.writeAsBytes(bytes);
+
+    await OpenFile.open(file.path);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Exported to ${file.path}')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Attendance Report'),
+        actions: [
+          if (_reportData.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.download),
+              tooltip: 'Export to Excel',
+              onPressed: _exportToExcel,
+            ),
+        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
