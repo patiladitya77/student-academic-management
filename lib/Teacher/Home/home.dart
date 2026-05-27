@@ -223,7 +223,9 @@ class _HomeContentState extends State<HomeContent> {
                 Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => TeacherImportStudentsScreen(),
+                      builder: (context) => TeacherImportStudentsScreen(
+                        teacherBranch: _branch ?? 'Computer Science & Engineering',
+                      ),
                     ));
               },
             ),

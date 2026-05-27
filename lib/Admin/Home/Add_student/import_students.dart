@@ -3,21 +3,16 @@ import 'package:excel/excel.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
-class TeacherImportStudentsScreen extends StatefulWidget {
-  final String teacherBranch;
-
-  const TeacherImportStudentsScreen({
-    super.key,
-    required this.teacherBranch,
-  });
+class AdminImportStudentsScreen extends StatefulWidget {
+  const AdminImportStudentsScreen({super.key});
 
   @override
-  State<TeacherImportStudentsScreen> createState() =>
-      _TeacherImportStudentsScreenState();
+  State<AdminImportStudentsScreen> createState() =>
+      _AdminImportStudentsScreenState();
 }
 
-class _TeacherImportStudentsScreenState
-    extends State<TeacherImportStudentsScreen> {
+class _AdminImportStudentsScreenState
+    extends State<AdminImportStudentsScreen> {
   final CollectionReference _studentsFirestore =
       FirebaseFirestore.instance.collection('Admin_Students_List');
 
@@ -27,14 +22,18 @@ class _TeacherImportStudentsScreenState
   int _skippedCount = 0;
 
   final List<String> _semesters = ['1', '2', '3', '4', '5', '6', '7', '8'];
-  String _selectedSemester = '1';
-  late String _selectedBranch;
+  final List<String> _branches = [
+    'Computer Science & Engineering',
+    'Information Science & Engineering',
+    'Civil Engineering',
+    'Mechanical Engineering',
+    'Electrical Engineering',
+    'Electronics & Communication Engineering',
+    'Biotechnology Engineering',
+  ];
 
-  @override
-  void initState() {
-    super.initState();
-    _selectedBranch = widget.teacherBranch;
-  }
+  String _selectedSemester = '1';
+  String _selectedBranch = 'Computer Science & Engineering';
 
   Future<void> _importStudents() async {
     setState(() {
@@ -72,9 +71,7 @@ class _TeacherImportStudentsScreenState
 
       for (final sheetName in workbook.tables.keys) {
         final sheet = workbook.tables[sheetName];
-        if (sheet == null || sheet.rows.isEmpty) {
-          continue;
-        }
+        if (sheet == null || sheet.rows.isEmpty) continue;
 
         final headerRow = sheet.rows.first;
         final headerIndex = _buildHeaderIndex(headerRow);
@@ -87,7 +84,6 @@ class _TeacherImportStudentsScreenState
           break;
         }
 
-        // Collect all valid rows first
         final List<Map<String, dynamic>> toWrite = [];
 
         for (var rowIndex = 1; rowIndex < sheet.rows.length; rowIndex++) {
@@ -96,8 +92,6 @@ class _TeacherImportStudentsScreenState
           final email = _cellValue(row, headerIndex['email']);
           final name = _cellValue(row, headerIndex['name']);
           final phoneNo = _cellValue(row, headerIndex['phone_no']);
-          final semester = _cellValue(row, headerIndex['semester']);
-          final branch = _cellValue(row, headerIndex['branch']);
 
           if (roleNo == null || roleNo.isEmpty) {
             _skippedCount++;
@@ -108,9 +102,8 @@ class _TeacherImportStudentsScreenState
           final payload = <String, dynamic>{
             'role': 'student',
             'id': normalizedId,
-            // Use Excel value if present, otherwise fall back to selected dropdown
-            'semester': (semester != null && semester.isNotEmpty) ? semester : _selectedSemester,
-            'branch': (branch != null && branch.isNotEmpty) ? branch : _selectedBranch,
+            'semester': _selectedSemester,
+            'branch': _selectedBranch,
           };
 
           if (email != null && email.isNotEmpty) payload['email'] = email;
@@ -120,18 +113,19 @@ class _TeacherImportStudentsScreenState
           toWrite.add(payload);
         }
 
-        // Write in batches of 500 (Firestore limit)
+        // Batch write in chunks of 500
         const batchSize = 500;
         for (var i = 0; i < toWrite.length; i += batchSize) {
-          final chunk = toWrite.sublist(i, i + batchSize > toWrite.length ? toWrite.length : i + batchSize);
+          final end = (i + batchSize > toWrite.length) ? toWrite.length : i + batchSize;
+          final chunk = toWrite.sublist(i, end);
           final batch = FirebaseFirestore.instance.batch();
           for (final payload in chunk) {
-            final docRef = _studentsFirestore.doc(payload['id'] as String);
-            batch.set(docRef, payload);
+            batch.set(_studentsFirestore.doc(payload['id'] as String), payload);
           }
           await batch.commit().timeout(
             const Duration(seconds: 30),
-            onTimeout: () => throw Exception('Upload timed out. Check your internet connection.'),
+            onTimeout: () =>
+                throw Exception('Upload timed out. Check your internet connection.'),
           );
           _uploadedCount += chunk.length;
         }
@@ -154,9 +148,8 @@ class _TeacherImportStudentsScreenState
 
   Map<String, int> _buildHeaderIndex(List<Data?> row) {
     const aliases = {
-      'role_no': 'role_no',
       'roll_no': 'role_no',
-      'role': 'role_no',
+      'role_no': 'role_no',
       'usn': 'role_no',
       'id': 'role_no',
       'name': 'name',
@@ -165,40 +158,29 @@ class _TeacherImportStudentsScreenState
       'phone_no': 'phone_no',
       'phone': 'phone_no',
       'mobile': 'phone_no',
-      'semester': 'semester',
-      'sem': 'semester',
-      'branch': 'branch',
-      'department': 'branch',
     };
 
     final index = <String, int>{};
     for (var i = 0; i < row.length; i++) {
       final raw = _stringCell(row[i]);
-      if (raw == null || raw.isEmpty) {
-        continue;
-      }
+      if (raw == null || raw.isEmpty) continue;
       final normalized = _normalizeHeader(raw);
       final mapped = aliases[normalized];
       if (mapped != null && !index.containsKey(mapped)) {
         index[mapped] = i;
       }
     }
-
     return index;
   }
 
   String? _cellValue(List<Data?> row, int? index) {
-    if (index == null || index < 0 || index >= row.length) {
-      return null;
-    }
+    if (index == null || index < 0 || index >= row.length) return null;
     return _stringCell(row[index]);
   }
 
   String? _stringCell(Data? cell) {
     final value = cell?.value;
-    if (value == null) {
-      return null;
-    }
+    if (value == null) return null;
     return value.toString().trim();
   }
 
@@ -216,9 +198,7 @@ class _TeacherImportStudentsScreenState
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          onPressed: () => Navigator.pop(context),
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
         ),
         backgroundColor: Colors.blueAccent,
@@ -245,21 +225,28 @@ class _TeacherImportStudentsScreenState
               onChanged: _isUploading ? null : (v) => setState(() => _selectedSemester = v!),
             ),
             const SizedBox(height: 12),
-            InputDecorator(
+            DropdownButtonFormField<String>(
+              value: _selectedBranch,
+              isExpanded: true,
               decoration: const InputDecoration(
                 labelText: 'Branch',
                 border: OutlineInputBorder(),
               ),
-              child: Text(
-                _selectedBranch,
-                style: const TextStyle(fontSize: 16),
-              ),
+              items: _branches
+                  .map((b) => DropdownMenuItem(value: b, child: Text(b)))
+                  .toList(),
+              onChanged: _isUploading ? null : (v) => setState(() => _selectedBranch = v!),
             ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
               onPressed: _isUploading ? null : _importStudents,
               icon: const Icon(Icons.upload_file),
               label: const Text('Upload Excel File'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blueAccent,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
             ),
             const SizedBox(height: 16),
             if (_isUploading)
@@ -267,7 +254,12 @@ class _TeacherImportStudentsScreenState
             else if (_statusMessage.isNotEmpty)
               Text(
                 _statusMessage,
-                style: const TextStyle(fontFamily: 'NexaBold'),
+                style: TextStyle(
+                  fontFamily: 'NexaBold',
+                  color: _statusMessage.startsWith('Failed')
+                      ? Colors.red
+                      : Colors.green[700],
+                ),
                 textAlign: TextAlign.center,
               ),
             const SizedBox(height: 24),
@@ -280,12 +272,12 @@ class _TeacherImportStudentsScreenState
                 padding: EdgeInsets.all(16),
                 child: Text(
                   'Required column: roll_no (or usn / id).\n'
-                  'Optional columns: name, email, phone_no.\n'
-                  'Semester and branch will use the dropdowns above unless your Excel includes those columns.',
-                  style: TextStyle(fontFamily: 'Nexa'),
+                  'Optional columns: name, email, phone_no.\n\n'
+                  'All imported students will be assigned the selected semester and branch.',
+                  style: TextStyle(fontFamily: 'Nexa', fontSize: 14),
                 ),
               ),
-            )
+            ),
           ],
         ),
       ),

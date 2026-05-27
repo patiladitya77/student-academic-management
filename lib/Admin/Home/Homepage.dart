@@ -4,6 +4,7 @@ import 'package:sam_pro/Admin/Addandmanage/Schedule.dart';
 import 'package:sam_pro/Admin/Course/CourseAdd.dart';
 import 'package:sam_pro/Admin/Course/CourseList.dart';
 import 'package:sam_pro/Admin/Home/Add_student/student.dart';
+import 'package:sam_pro/Admin/Home/Add_student/import_students.dart';
 import 'package:sam_pro/Admin/Home/Add_student/students_list.dart';
 import 'package:sam_pro/Admin/Home/Add_teacher/teacher.dart';
 import 'package:sam_pro/Admin/Home/Add_teacher/teachers_list.dart';
@@ -179,6 +180,13 @@ class adminhomepage extends StatelessWidget {
                             Colors.orange.shade50,
                             Colors.orangeAccent,
                             TeacherPage()),
+                        _buildIconButton(
+                            context,
+                            "Import",
+                            Icons.upload_file,
+                            Colors.green.shade50,
+                            Colors.green,
+                            const AdminImportStudentsScreen()),
                       ],
                     ),
                   ),

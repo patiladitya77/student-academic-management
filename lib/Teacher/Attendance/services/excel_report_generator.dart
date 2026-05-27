@@ -254,8 +254,16 @@ class ExcelReportGenerator {
       dateToSessions.putIfAbsent(session.date, () => []).add(session);
     }
     
-    // Iterate through each student
-    for (final entry in studentAttendance.entries) {
+    // Iterate through each student, sorted numerically by ID
+    final sortedEntries = studentAttendance.entries.toList()
+      ..sort((a, b) {
+        final aNum = int.tryParse(a.key);
+        final bNum = int.tryParse(b.key);
+        if (aNum != null && bNum != null) return aNum.compareTo(bNum);
+        return a.key.compareTo(b.key);
+      });
+
+    for (final entry in sortedEntries) {
       final studentId = entry.key;
       final attendanceData = entry.value;
       int columnIndex = 0;

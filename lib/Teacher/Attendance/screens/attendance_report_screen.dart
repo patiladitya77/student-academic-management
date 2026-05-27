@@ -1000,7 +1000,7 @@ class _AttendanceReportScreenState extends State<AttendanceReportScreen> {
         cell.cellStyle = CellStyle(bold: true);
       }
 
-      // Sort defaulters by attendance % ascending
+      // Sort defaulters: by attendance % ascending, then numerically by ID for ties
       defaulters.sort((a, b) {
         final aTotal = a.value['total'] as int? ?? 0;
         final aPresent = a.value['present'] as int? ?? 0;
@@ -1008,7 +1008,12 @@ class _AttendanceReportScreenState extends State<AttendanceReportScreen> {
         final bPresent = b.value['present'] as int? ?? 0;
         final aPct = aTotal > 0 ? aPresent * 100.0 / aTotal : 0.0;
         final bPct = bTotal > 0 ? bPresent * 100.0 / bTotal : 0.0;
-        return aPct.compareTo(bPct);
+        if (aPct != bPct) return aPct.compareTo(bPct);
+        // Tie-break: numeric sort by student ID
+        final aNum = int.tryParse(a.key);
+        final bNum = int.tryParse(b.key);
+        if (aNum != null && bNum != null) return aNum.compareTo(bNum);
+        return a.key.compareTo(b.key);
       });
 
       // Data rows
