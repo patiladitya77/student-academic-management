@@ -222,7 +222,7 @@ class ViewAchievements extends StatelessWidget {
                                       onPressed: () {
                                         _viewPDF(context, achievement['pdfUrl']);
                                       },
-                                      icon: const Icon(FontAwesomeIcons.book,
+                                        icon: FaIcon(FontAwesomeIcons.book,
                                           color: Colors.red),
                                       label: const Text("Certificate"),
                                     ),

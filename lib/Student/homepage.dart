@@ -278,7 +278,7 @@ class _HomePageState extends State<HomePage> {
               },
             ),
             ListTile(
-              leading: Icon(
+              leading: FaIcon(
                 FontAwesomeIcons.add,
                 color: Colors.blueAccent,
               ),
@@ -471,7 +471,7 @@ class _HomePageState extends State<HomePage> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(FontAwesomeIcons.trophy,
+                                FaIcon(FontAwesomeIcons.trophy,
                                   size: 40, color: Colors.pinkAccent),
                               SizedBox(height: 8),
                               Text(

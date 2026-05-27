@@ -656,13 +656,19 @@ class _AttendancePageState extends State<AttendancePage> {
       cell.value = TextCellValue('Attendance %');
       cell.cellStyle = CellStyle(bold: true);
 
-      // Add student data rows (starting from row 5, index 4)
+      // Sort docs numerically by student ID
+      final sortedDocs = studentsSnapshot.docs.where((d) => d.id != 'sessions').toList()
+        ..sort((a, b) {
+          final aNum = int.tryParse(a.id);
+          final bNum = int.tryParse(b.id);
+          if (aNum != null && bNum != null) return aNum.compareTo(bNum);
+          return a.id.compareTo(b.id);
+        });
+
       int rowIndex = 4;
       int counter = 1;
       
-      for (var doc in studentsSnapshot.docs) {
-        // Skip the 'sessions' document
-        if (doc.id == 'sessions') continue;
+      for (var doc in sortedDocs) {
         
         Map<String, dynamic> studentData = doc.data() as Map<String, dynamic>;
         int present = studentData['present'] ?? 0;
@@ -1073,9 +1079,7 @@ class _AttendancePageState extends State<AttendancePage> {
             child: _checkingExisting
                 ? Center(child: CircularProgressIndicator())
                 : StreamBuilder<QuerySnapshot>(
-              stream: _studentsRef
-                  .where('semester', isEqualTo: widget.semester)
-                  .snapshots(),
+              stream: _studentsRef.snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return Center(child: CircularProgressIndicator());
@@ -1091,7 +1095,21 @@ class _AttendancePageState extends State<AttendancePage> {
                   return Center(child: Text('No students found.'));
                 }
 
-                final studentDocs = snapshot.data!.docs;
+                // Show all students, sorted numerically by ID
+                final studentDocs = List.of(snapshot.data!.docs)
+                  ..sort((a, b) {
+                    final aId = (a.data() as Map<String, dynamic>)['id']?.toString() ?? '';
+                    final bId = (b.data() as Map<String, dynamic>)['id']?.toString() ?? '';
+                    // Try numeric sort first, fall back to string sort for alphanumeric IDs
+                    final aNum = int.tryParse(aId);
+                    final bNum = int.tryParse(bId);
+                    if (aNum != null && bNum != null) return aNum.compareTo(bNum);
+                    return aId.compareTo(bId);
+                  });
+
+                if (studentDocs.isEmpty) {
+                  return const Center(child: Text('No students found.'));
+                }
 
                 for (var student in studentDocs) {
                   final studentData = student.data() as Map<String, dynamic>;
@@ -1107,8 +1125,9 @@ class _AttendancePageState extends State<AttendancePage> {
                     final studentData = student.data() as Map<String, dynamic>;
                     final studentId =
                         studentData['id'] ?? 'Unknown ID';
-                    final studentEmail =
-                        studentData['email'] ?? 'No Email';
+                    final studentName = studentData['name'] as String?;
+                    final studentEmail = studentData['email'] as String?;
+                    final displaySub = studentName ?? studentEmail ?? 'No Info';
 
                     return Column(
                       children: [
@@ -1117,7 +1136,7 @@ class _AttendancePageState extends State<AttendancePage> {
                             child: Icon(Icons.perm_identity),
                           ),
                           title: Text(studentId),
-                          subtitle: Text(studentEmail),
+                          subtitle: Text(displaySub),
                           trailing: StatefulBuilder(
                             builder: (context, setLocalState) {
                               return Row(
