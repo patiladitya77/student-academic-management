@@ -9,6 +9,7 @@ import 'package:sam_pro/Student/notification.dart';
 import 'package:sam_pro/Student/drawer/Student_list.dart';
 import 'package:sam_pro/Teacher/Home/TeacherAttendence.dart';
 import 'package:sam_pro/Teacher/Home/TeacherProfile.dart';
+import 'package:sam_pro/Teacher/Home/import_students.dart';
 import 'package:sam_pro/Teacher/Home/postassignment.dart';
 import 'package:sam_pro/Teacher/Notes/uploadenotes.dart';
 import 'package:sam_pro/Teacher/Teacheraddedacademics/TeacherCourse.dart';
@@ -208,6 +209,21 @@ class _HomeContentState extends State<HomeContent> {
                     context,
                     MaterialPageRoute(
                       builder: (context) => StudentsList(),
+                    ));
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.upload_file, color: Colors.blueAccent),
+              title: Text(
+                "Import Students",
+                style:
+                    TextStyle(fontFamily: 'NexaBold', fontWeight: FontWeight.w900),
+              ),
+              onTap: () {
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => TeacherImportStudentsScreen(),
                     ));
               },
             ),
